@@ -118,4 +118,3 @@ allgene<-allgene[order(allgene$direct),]
 heaemap_allgene<-pheatmap(allgene,color = colorRampPalette(colors = c("#3952A3","white","#E7161B"))(100),
                           cluster_rows = F,cluster_cols = F,clustering_method = 'average')
 
-

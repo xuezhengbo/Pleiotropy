@@ -10,7 +10,7 @@
 
 ### make loci.bed for each clump, including chr, start, and end
 
-#bedtools merge the overlap clumps
+#merge the overlap clumps using bedtools
 /share/apps/bedtools2/bin/bedtools merge -i loci.bed -c 1,4 -o count,collapse
 
 #GCTA-COJO conditional analysis

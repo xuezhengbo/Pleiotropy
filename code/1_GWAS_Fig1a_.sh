@@ -1,3 +1,4 @@
+############################## quality control ##################################
 #select variants with INFO > 0.4
 for CHR in {1..22}
 do
@@ -36,11 +37,64 @@ plink2 --bfile merge_maf001 --missing --threads 2 --memory 50000
 #remove the sample with lower call rate in a pair of kinship
 plink2 --bfile merge_maf001 --remove pihat_low_call_rate.txt --geno 0.05 --hwe 1e-6 --maf 0.01 --make-bed --threads 2 --memory 50000 --out merge_maf001_no_relative
 
+###################################################################################
+
 #PCA
 plink2 --bfile merge_maf001_no_relative --pca 10 --out merge_maf001_no_relative_pca
 #make covar.txt with age and 10 PCs
-#GWAS logistic model
+
+############################### association analyses ####################################
+#PLINK GWAS logistic model
 plink2 --bfile merge_maf001_no_relative --covar covar.txt --covar-variance-standardize --glm hide-covar --adjust --out ./result/AMD_10pc --threads 4
+
+#SAIGE
+#step 1
+source activate /share/pub/lik/Software/anaconda3/envs/saige
+Rscript /share/pub/lik/Software/anaconda3/envs/saige/bin/step1_fitNULLGLMM.R \
+        --plinkFile=/share/pub/xuezb/biobank/GWAS/AMD/data_68304/SAIGE/merge_prune \
+        --phenoFile=/share/pub/xuezb/biobank/GWAS/AMD/data_68304/SAIGE/pheno.txt \
+        --phenoCol=AMD \
+        --covarColList=age,sex,PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10 \
+        --sampleIDColinphenoFile=IID \
+        --traitType=binary \
+        --outputPrefix=/share/pub/xuezb/biobank/GWAS/AMD/data_68304/SAIGE/AMD \
+        --nThreads=10
+#step 2
+cd /share/pub/xuezb/biobank/GWAS/AMD/data_68304/SAIGE
+Rscript /share/pub/lik/Software/anaconda3/envs/saige/bin/step2_SPAtests.R \
+--vcfFile=./AMD.vcf.gz \
+--vcfFileIndex=./AMD.vcf.gz.csi \
+--vcfField=GT \
+--chrom=1 \
+--SAIGEOutputFile=./AMD_saige_chr1.txt \
+--minMAF=0 \
+--minMAC=20 \
+--LOCO=FALSE \
+--GMMATmodelFile=./AMD.rda \
+--varianceRatioFile=./AMD.varianceRatio.txt
+
+#fastGWA-GLMM
+#step 1
+/share/pub/xuezb/software/gcta_1.93.2beta/gcta64 \
+--bfile /share/pub/xuezb/biobank/GWAS/ASSET/UKB_v1/merge \
+--autosome \
+--sparse-cutoff 0.05 \
+--make-grm \
+--out /share/pub/xuezb/biobank/GWAS/all_88250 \
+--thread-num 10
+#step 2
+/share/pub/chenfk/tools/gcta_1.93.2beta/gcta_GWAS \
+--bfile /share/pub/xuezb/biobank/GWAS/ASSET/UKB_v1/merge \
+--grm-sparse /share/pub/xuezb/biobank/GWAS/all_88250 \
+--fastGWA-mlm-binary \
+--pheno phenotype.txt \
+--qcovar qcovar.txt \
+--covar covar.txt \
+--thread-num 2 \
+--out AMD
+
+############################################################################
+
 
 
 
